@@ -7,7 +7,7 @@
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      max-width: 800px;
+      max-width: 900px;
       margin: 40px auto;
       padding: 0 20px;
       background-color: #eef2f5;
@@ -38,9 +38,20 @@
       border-radius: 8px;
       margin-bottom: 20px;
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 10px;
+      gap: 20px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .option-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    select {
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
     }
     .btn {
       display: block;
@@ -64,10 +75,9 @@
     }
     #previewArea {
       margin-top: 30px;
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
       gap: 15px;
-      justify-content: center;
     }
     .preview-item {
       background: #fff;
@@ -75,11 +85,14 @@
       border-radius: 6px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       text-align: center;
+      font-size: 12px;
     }
-    /* 흰색 테두리가 명확히 보이도록 어두운 체커보드 배경 적용 */
+    /* 흰색 테두리가 명확히 보이도록 투명 체커보드 배경 적용 */
     .preview-item img {
-      max-width: 150px;
-      max-height: 150px;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1/1;
+      object-fit: contain;
       background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), 
                         linear-gradient(-45deg, #ccc 25%, transparent 25%), 
                         linear-gradient(45deg, transparent 75%, #ccc 75%), 
@@ -87,6 +100,8 @@
       background-size: 16px 16px;
       background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
       background-color: #777;
+      margin-bottom: 5px;
+      border-radius: 4px;
     }
   </style>
 </head>
@@ -95,16 +110,26 @@
   <h1>OGQ 스티커 자르기 & 테두리 생성기</h1>
 
   <div class="upload-box" onclick="document.getElementById('imageInput').click()">
-    <p>클릭하여 이미지를 업로드하세요 (PNG 권장)</p>
-    <input type="file" id="imageInput" accept="image/*" multiple>
+    <p>클릭하여 분할할 대형 이미지를 업로드하세요 (PNG 권장)</p>
+    <input type="file" id="imageInput" accept="image/*">
   </div>
 
   <div class="options">
-    <input type="checkbox" id="addBorderCheckbox" checked>
-    <label for="addBorderCheckbox"><strong>외곽에 2px 흰색 테두리 자동으로 추가하기</strong></label>
+    <div class="option-item">
+      <label for="gridSelect"><strong>분할 그리드:</strong></label>
+      <select id="gridSelect">
+        <option value="4x6">4열 x 6행 (총 24개)</option>
+        <option value="6x4">6열 x 4행 (총 24개)</option>
+        <option value="3x8">3열 x 8행 (총 24개)</option>
+      </select>
+    </div>
+    <div class="option-item">
+      <input type="checkbox" id="addBorderCheckbox" checked>
+      <label for="addBorderCheckbox"><strong>자른 후 외곽에 3px 흰색 테두리 추가</strong></label>
+    </div>
   </div>
 
-  <button class="btn" id="downloadBtn" disabled>개별 스티커 각각 다운로드</button>
+  <button class="btn" id="downloadBtn" disabled>조각난 스티커 각각 다운로드 (24장)</button>
 
   <div id="previewArea"></div>
 
@@ -113,128 +138,130 @@
     const downloadBtn = document.getElementById('downloadBtn');
     const previewArea = document.getElementById('previewArea');
     const addBorderCheckbox = document.getElementById('addBorderCheckbox');
+    const gridSelect = document.getElementById('gridSelect');
 
-    let loadedImages = [];
+    let sourceImage = null;
+    let slicedCanvases = [];
 
-    // 바깥쪽 2px 흰색 테두리 생성 함수
-    function createBorderCanvas(sourceImg) {
-      const strokeWidth = 2; // 요청하신 2px 테두리
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+    // 바깥쪽 3px 흰색 테두리 추가 함수
+    function createBorderCanvas(sourceCanvas) {
+      const strokeWidth = 3; // 3px 테두리로 변경
+      const borderCanvas = document.createElement('canvas');
+      const ctx = borderCanvas.getContext('2d');
 
-      canvas.width = sourceImg.width + strokeWidth * 2;
-      canvas.height = sourceImg.height + strokeWidth * 2;
+      borderCanvas.width = sourceCanvas.width + strokeWidth * 2;
+      borderCanvas.height = sourceCanvas.height + strokeWidth * 2;
 
-      // 임시 캔버스 생성하여 실루엣 처리
       const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = canvas.width;
-      tempCanvas.height = canvas.height;
+      tempCanvas.width = borderCanvas.width;
+      tempCanvas.height = borderCanvas.height;
       const tempCtx = tempCanvas.getContext('2d');
 
-      // 16방향으로 흰색 실루엣 확장
-      const steps = 16;
+      // 24방향 실루엣 확장을 통해 3px 모서리를 곡선으로 부드럽게 표현
+      const steps = 24;
       for (let i = 0; i < steps; i++) {
         const angle = (i * 2 * Math.PI) / steps;
         const x = strokeWidth + Math.cos(angle) * strokeWidth;
         const y = strokeWidth + Math.sin(angle) * strokeWidth;
-        tempCtx.drawImage(sourceImg, x, y);
+        tempCtx.drawImage(sourceCanvas, x, y);
       }
 
-      // 알파 영역을 순수 흰색으로 전환
+      // 흰색 채우기
       tempCtx.globalCompositeOperation = 'source-in';
       tempCtx.fillStyle = '#FFFFFF';
       tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
 
-      // 테두리 위에 원본 이미지를 중앙 배치
+      // 원본 합성
       ctx.drawImage(tempCanvas, 0, 0);
       ctx.globalCompositeOperation = 'source-over';
-      ctx.drawImage(sourceImg, strokeWidth, strokeWidth);
+      ctx.drawImage(sourceCanvas, strokeWidth, strokeWidth);
 
-      return canvas;
+      return borderCanvas;
     }
 
-    // 미리보기 렌더링
-    function renderPreviews() {
+    // 이미지 분할 처리 함수
+    function processAndSliceImage() {
+      if (!sourceImage) return;
+
       previewArea.innerHTML = '';
+      slicedCanvases = [];
+
+      const [cols, rows] = gridSelect.value.split('x').map(Number);
+      const cellWidth = sourceImage.width / cols;
+      const cellHeight = sourceImage.height / rows;
       const shouldAddBorder = addBorderCheckbox.checked;
 
-      loadedImages.forEach(({ img }) => {
-        let finalCanvas;
-        if (shouldAddBorder) {
-          finalCanvas = createBorderCanvas(img);
-        } else {
-          finalCanvas = document.createElement('canvas');
-          finalCanvas.width = img.width;
-          finalCanvas.height = img.height;
-          finalCanvas.getContext('2d').drawImage(img, 0, 0);
+      let count = 1;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          // 1. 이미지 조각 자르기
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = cellWidth;
+          sliceCanvas.height = cellHeight;
+          const sliceCtx = sliceCanvas.getContext('2d');
+
+          sliceCtx.drawImage(
+            sourceImage,
+            c * cellWidth, r * cellHeight, cellWidth, cellHeight,
+            0, 0, cellWidth, cellHeight
+          );
+
+          // 2. 테두리 적용 여부 처리 (3px)
+          const finalCanvas = shouldAddBorder ? createBorderCanvas(sliceCanvas) : sliceCanvas;
+          slicedCanvases.push(finalCanvas);
+
+          // 3. 미리보기 생성
+          const item = document.createElement('div');
+          item.className = 'preview-item';
+
+          const imgEl = document.createElement('img');
+          imgEl.src = finalCanvas.toDataURL('image/png');
+
+          const label = document.createElement('span');
+          label.innerText = `스티커 #${count}`;
+
+          item.appendChild(imgEl);
+          item.appendChild(label);
+          previewArea.appendChild(item);
+
+          count++;
         }
+      }
 
-        const item = document.createElement('div');
-        item.className = 'preview-item';
-
-        const previewImg = document.createElement('img');
-        previewImg.src = finalCanvas.toDataURL('image/png');
-
-        item.appendChild(previewImg);
-        previewArea.appendChild(item);
-      });
+      downloadBtn.disabled = false;
+      downloadBtn.innerText = `조각난 스티커 각각 다운로드 (${slicedCanvases.length}장)`;
     }
 
-    // 파일 선택 이벤트
+    // 원본 이미지 업로드
     imageInput.addEventListener('change', (e) => {
-      const files = e.target.files;
-      if (!files.length) return;
+      const file = e.target.files[0];
+      if (!file) return;
 
-      loadedImages = [];
-      let loadedCount = 0;
-
-      Array.from(files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const img = new Image();
-          img.onload = () => {
-            loadedImages.push({ img, name: file.name });
-            loadedCount++;
-            if (loadedCount === files.length) {
-              renderPreviews();
-              downloadBtn.disabled = false;
-            }
-          };
-          img.src = event.target.result;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          sourceImage = img;
+          processAndSliceImage();
         };
-        reader.readAsDataURL(file);
-      });
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
     });
 
-    // 체크박스 클릭 시 미리보기 업데이트
-    addBorderCheckbox.addEventListener('change', () => {
-      if (loadedImages.length > 0) {
-        renderPreviews();
-      }
-    });
+    // 옵션 변경 시 즉시 재분할 및 테두리 업데이트
+    addBorderCheckbox.addEventListener('change', processAndSliceImage);
+    gridSelect.addEventListener('change', processAndSliceImage);
 
-    // 개별 이미지 1장씩 순차 다운로드
+    // 개별 다운로드 실행
     downloadBtn.addEventListener('click', () => {
-      const shouldAddBorder = addBorderCheckbox.checked;
-
-      loadedImages.forEach(({ img, name }, i) => {
-        let finalCanvas;
-        if (shouldAddBorder) {
-          finalCanvas = createBorderCanvas(img);
-        } else {
-          finalCanvas = document.createElement('canvas');
-          finalCanvas.width = img.width;
-          finalCanvas.height = img.height;
-          finalCanvas.getContext('2d').drawImage(img, 0, 0);
-        }
-
-        // 약간의 딜레이를 주어 연속 다운로드 팝업 누락 방지
+      slicedCanvases.forEach((canvas, i) => {
         setTimeout(() => {
           const link = document.createElement('a');
-          link.download = `ogq_sticker_${i + 1}_${name}`;
-          link.href = finalCanvas.toDataURL('image/png');
+          link.download = `ogq_sticker_${String(i + 1).padStart(2, '0')}.png`;
+          link.href = canvas.toDataURL('image/png');
           link.click();
-        }, i * 200); // 0.2초 간격 다운로드
+        }, i * 200); // 브라우저 차단을 막기 위해 0.2초 간격 분산 다운로드
       });
     });
   </script>
