@@ -1,217 +1,199 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OGQ 스티커 자동 분할기</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #f4f6f9;
-            margin: 0;
-            padding: 40px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: #333;
-        }
-        .container {
-            background: #ffffff;
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            max-width: 600px;
-            width: 100%;
-            text-align: center;
-        }
-        h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-            color: #03c75a;
-        }
-        p {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 25px;
-        }
-        .upload-btn-label {
-            display: block;
-            background-color: #03c75a;
-            color: white;
-            padding: 18px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 12px;
-            cursor: pointer;
-            margin-bottom: 15px;
-            transition: 0.2s;
-        }
-        .upload-btn-label:active {
-            background-color: #02b350;
-        }
-        input[type="file"] {
-            display: none;
-        }
-        .btn {
-            background-color: #2f3438;
-            color: white;
-            border: none;
-            padding: 14px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            transition: 0.2s;
-        }
-        .btn:hover {
-            background-color: #1a1d20;
-        }
-        .btn:disabled {
-            background-color: #cbd5e1;
-            cursor: not-allowed;
-        }
-        .status {
-            margin-top: 15px;
-            font-weight: bold;
-            color: #e11d48;
-            font-size: 14px;
-        }
-        .success {
-            color: #03c75a;
-        }
-        #preview-container {
-            margin-top: 25px;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            max-height: 400px;
-            overflow-y: auto;
-            padding: 5px;
-        }
-        .preview-item {
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 5px;
-            background: #fff;
-            text-align: center;
-        }
-        .preview-item img {
-            width: 100%;
-            height: auto;
-            border-radius: 4px;
-        }
-        .preview-item span {
-            font-size: 11px;
-            color: #888;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OGQ 스티커 자르기 & 테두리 생성기</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 20px;
+      background-color: #f8f9fa;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .upload-box {
+      border: 2px dashed #007bff;
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      background-color: #fff;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    .upload-box:hover {
+      background-color: #f1f7ff;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    .options {
+      background: #fff;
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      background-color: #007bff;
+      color: #fff;
+      text-align: center;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background-color: #0056b3;
+    }
+    .btn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    #previewArea {
+      margin-top: 30px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+    }
+    .preview-item {
+      background: #fff;
+      padding: 10px;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .preview-item img {
+      max-width: 150px;
+      max-height: 150px;
+      background-image: linear-gradient(45deg, #eee 25%, transparent 25%), linear-gradient(-45deg, #eee 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #eee 75%), linear-gradient(-45deg, transparent 75%, #eee 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+  </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>OGQ 스티커 자동 분할기</h1>
-    <p>프로크리에이트 4×6 통이미지(2960×3840)를 선택하면 24개로 자동 분할됩니다.</p>
+  <h1>OGQ 스티커 자르기 & 테두리 생성기</h1>
 
-    <label class="upload-btn-label">
-        📁 통이미지 파일 선택하기
-        <input type="file" id="imageInput" accept="image/*">
-    </label>
+  <div class="upload-box" onclick="document.getElementById('imageInput').click()">
+    <p>클릭하여 이미지를 업로드하세요 (PNG 권장)</p>
+    <input type="file" id="imageInput" accept="image/*" multiple>
+  </div>
 
-    <div id="file-name" style="font-size: 13px; color: #666; margin-bottom: 15px;">선택된 파일 없음</div>
+  <div class="options">
+    <input type="checkbox" id="addBorderCheckbox" checked>
+    <label for="addBorderCheckbox"><strong>외곽에 2px 흰색 테두리 자동으로 추가하기</strong></label>
+  </div>
 
-    <button class="btn" id="splitBtn" disabled>24장 자르고 다운로드하기</button>
-    
-    <div class="status" id="statusText">이미지를 선택해주세요.</div>
-    <div id="preview-container"></div>
-</div>
+  <button class="btn" id="downloadBtn" disabled>개별 스티커 변환 및 다운로드</button>
 
-<script>
+  <div id="previewArea"></div>
+
+  <script>
     const imageInput = document.getElementById('imageInput');
-    const splitBtn = document.getElementById('splitBtn');
-    const fileNameDisplay = document.getElementById('file-name');
-    const statusText = document.getElementById('statusText');
-    const previewContainer = document.getElementById('preview-container');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const previewArea = document.getElementById('previewArea');
+    const addBorderCheckbox = document.getElementById('addBorderCheckbox');
 
-    let uploadedImage = null;
+    let loadedImages = [];
 
-    imageInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
+    // 2px 바깥쪽 흰색 테두리를 추가하는 함수
+    function apply2pxOuterWhiteBorder(sourceCanvas) {
+      const strokeWidth = 2; // 2px 테두리
+      const borderCanvas = document.createElement('canvas');
+      const ctx = borderCanvas.getContext('2d');
 
-        fileNameDisplay.innerHTML = `선택된 파일: <b>${file.name}</b>`;
-        statusText.className = "status";
-        statusText.textContent = "이미지 안정화 로딩 중...";
+      borderCanvas.width = sourceCanvas.width + strokeWidth * 2;
+      borderCanvas.height = sourceCanvas.height + strokeWidth * 2;
 
+      // 1. 16방향 촘촘한 각도로 회전시켜 바깥쪽 실루엣 생성
+      const steps = 16;
+      for (let i = 0; i < steps; i++) {
+        const angle = (i * 2 * Math.PI) / steps;
+        const x = strokeWidth + Math.cos(angle) * strokeWidth;
+        const y = strokeWidth + Math.sin(angle) * strokeWidth;
+        ctx.drawImage(sourceCanvas, x, y);
+      }
+
+      // 2. 실루엣 내부를 완벽한 흰색으로 채움
+      ctx.globalCompositeOperation = 'source-in';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, borderCanvas.width, borderCanvas.height);
+
+      // 3. 중앙에 원본 이미지를 덮어씌워 2px 바깥쪽 테두리만 남김
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(sourceCanvas, strokeWidth, strokeWidth);
+
+      return borderCanvas;
+    }
+
+    // 이미지 업로드 처리
+    imageInput.addEventListener('change', (e) => {
+      const files = e.target.files;
+      if (!files.length) return;
+
+      loadedImages = [];
+      previewArea.innerHTML = '';
+
+      Array.from(files).forEach((file, index) => {
         const reader = new FileReader();
-        reader.onload = function(event) {
-            const img = new Image();
-            img.onload = function() {
-                uploadedImage = img;
-                splitBtn.disabled = false;
-                statusText.className = "status success";
-                statusText.textContent = `로드 완료! (${img.width}x${img.height})`;
-            };
-            img.onerror = function() {
-                statusText.className = "status";
-                statusText.textContent = "이미지 로드 실패 (파일 형식 확인)";
-            };
-            img.src = event.target.result;
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            loadedImages.push({ img, name: file.name });
+            
+            // 미리보기 생성
+            const item = document.createElement('div');
+            item.className = 'preview-item';
+            item.appendChild(img);
+            previewArea.appendChild(item);
+
+            if (loadedImages.length === files.length) {
+              downloadBtn.disabled = false;
+            }
+          };
+          img.src = event.target.result;
         };
         reader.readAsDataURL(file);
+      });
     });
 
-    splitBtn.addEventListener('click', () => {
-        if (!uploadedImage) return;
+    // 다운로드 버튼 클릭 이벤트
+    downloadBtn.addEventListener('click', () => {
+      const shouldAddBorder = addBorderCheckbox.checked;
 
-        previewContainer.innerHTML = '';
-        statusText.className = "status success";
-        statusText.textContent = '24조각으로 나누는 중...';
+      loadedImages.forEach(({ img, name }, i) => {
+        // 원본 규격의 기본 캔버스 생성
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = img.width;
+        tempCanvas.height = img.height;
+        const ctx = tempCanvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
 
-        const cols = 4;
-        const rows = 6;
-        const pieceWidth = uploadedImage.width / cols;
-        const pieceHeight = uploadedImage.height / rows;
+        // 체크박스 유무에 따라 2px 테두리 적용 여부 결정
+        const finalCanvas = shouldAddBorder ? apply2pxOuterWhiteBorder(tempCanvas) : tempCanvas;
 
-        let count = 0;
-
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                count++;
-                const canvas = document.createElement('canvas');
-                canvas.width = Math.floor(pieceWidth);
-                canvas.height = Math.floor(pieceHeight);
-                const ctx = canvas.getContext('2d');
-
-                ctx.drawImage(
-                    uploadedImage, 
-                    Math.floor(c * pieceWidth), Math.floor(r * pieceHeight), 
-                    Math.floor(pieceWidth), Math.floor(pieceHeight), 
-                    0, 0, 
-                    canvas.width, canvas.height
-                );
-
-                const dataUrl = canvas.toDataURL('image/png');
-
-                // 미리보기 생성
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'preview-item';
-                itemDiv.innerHTML = `<img src="${dataUrl}"><span>#${count}</span>`;
-                previewContainer.appendChild(itemDiv);
-
-                // 다운로드 트리거
-                setTimeout((idx, url) => {
-                    const link = document.createElement('a');
-                    link.download = `sticker_${idx.toString().padStart(2, '0')}.png`;
-                    link.href = url;
-                    link.click();
-                }, count * 200, count, dataUrl);
-            }
-        }
-
-        statusText.textContent = '분할 완료! 다운로드 폴더를 확인하세요.';
+        // PNG로 다운로드 진행
+        const link = document.createElement('a');
+        link.download = `ogq_sticker_${i + 1}_${name}`;
+        link.href = finalCanvas.toDataURL('image/png');
+        link.click();
+      });
     });
-</script>
-
+  </script>
 </body>
 </html>
