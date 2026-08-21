@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>[아티아띠] 네이버 OGQ 스티커 자동 컷팅</title>
+  <title>[아티아띠]OGQ 스티커 자르기 & 테두리 생성기</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -76,7 +76,6 @@
       text-align: center;
       font-size: 12px;
     }
-    /* 연하고 부드러운 투명 격자 배경 */
     .preview-item img {
       width: 100%;
       height: auto;
@@ -97,19 +96,21 @@
 </head>
 <body>
 
-  <h1>네이버 OGQ 스티커 자르기</h1>
+  <h1>네이버OGQ 스티커 자르기</h1>
 
   <div class="upload-box" onclick="document.getElementById('imageInput').click()">
-    <p>클릭하여 분할할 이미지를 업로드하세요.</p><p>2960x3840px(PNG 권장)</p>
+    <p>클릭하여 분할할 대형 이미지를 업로드하세요!
+      <br />2960x3840px(PNG 권장)</p>
+    <p>*다운로드 버튼이 24번 열립니다! 압축하지 않고 바로 사용할 수 있어요 :)</p>
     <input type="file" id="imageInput" accept="image/*">
   </div>
 
   <div class="options">
     <input type="checkbox" id="addBorderCheckbox" checked>
-    <label for="addBorderCheckbox"><strong>외곽에 흰색 테두리 추가하기</strong></label>
+    <label for="addBorderCheckbox"><strong>흰색 테두리 추가하기</strong></label>
   </div>
 
-  <button class="btn" id="downloadBtn" disabled>저장하기 (개별 다운로드/24장)</button>
+  <button class="btn" id="downloadBtn" disabled>다운로드(24장)</button>
 
   <div id="previewArea"></div>
 
@@ -122,43 +123,54 @@
     let sourceImage = null;
     let slicedCanvases = [];
 
-    // 바깥쪽 5px 흰색 테두리 추가 함수
-    function createBorderCanvas(sourceCanvas) {
-      const strokeWidth = 5; // 5px 테두리
-      const borderCanvas = document.createElement('canvas');
-      const ctx = borderCanvas.getContext('2d');
+    // 최종 크기를 원본 규격(targetWidth x targetHeight)에 맞추면서 5px 테두리를 입히는 함수
+    function createBorderCanvasToExactSize(sourceCanvas, targetWidth, targetHeight) {
+      const strokeWidth = 5; // 테두리 두께
 
-      borderCanvas.width = sourceCanvas.width + strokeWidth * 2;
-      borderCanvas.height = sourceCanvas.height + strokeWidth * 2;
+      // 1. 테두리 여백을 고려해 원본 그림을 살짝 축소하여 그릴 캔버스 생성
+      const innerWidth = targetWidth - (strokeWidth * 2);
+      const innerHeight = targetHeight - (strokeWidth * 2);
 
+      const scaledCanvas = document.createElement('canvas');
+      scaledCanvas.width = innerWidth;
+      scaledCanvas.height = innerHeight;
+      const scaledCtx = scaledCanvas.getContext('2d');
+      scaledCtx.drawImage(sourceCanvas, 0, 0, innerWidth, innerHeight);
+
+      // 2. 최종 규격(740x640)의 메인 캔버스 생성
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = targetWidth;
+      finalCanvas.height = targetHeight;
+      const finalCtx = finalCanvas.getContext('2d');
+
+      // 3. 임시 캔버스에 32방향으로 축소된 이미지를 회전시켜 5px 테두리 실루엣 생성
       const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = borderCanvas.width;
-      tempCanvas.height = borderCanvas.height;
+      tempCanvas.width = targetWidth;
+      tempCanvas.height = targetHeight;
       const tempCtx = tempCanvas.getContext('2d');
 
-      // 32방향 회전 처리로 5px 두께에서도 둥글고 매끄러운 곡선 실루엣 형성
       const steps = 32;
       for (let i = 0; i < steps; i++) {
         const angle = (i * 2 * Math.PI) / steps;
         const x = strokeWidth + Math.cos(angle) * strokeWidth;
         const y = strokeWidth + Math.sin(angle) * strokeWidth;
-        tempCtx.drawImage(sourceCanvas, x, y);
+        tempCtx.drawImage(scaledCanvas, x, y);
       }
 
-      // 흰색 실루엣 생성
+      // 4. 알파 영역을 순수 흰색으로 전환
       tempCtx.globalCompositeOperation = 'source-in';
       tempCtx.fillStyle = '#FFFFFF';
-      tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+      tempCtx.fillRect(0, 0, targetWidth, targetHeight);
 
-      // 원본 이미지 위에 덮어씌우기
-      ctx.drawImage(tempCanvas, 0, 0);
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.drawImage(sourceCanvas, strokeWidth, strokeWidth);
+      // 5. 최종 캔버스에 흰색 테두리를 깔고, 그 위에 원본 축소 이미지를 중앙 배치
+      finalCtx.drawImage(tempCanvas, 0, 0);
+      finalCtx.globalCompositeOperation = 'source-over';
+      finalCtx.drawImage(scaledCanvas, strokeWidth, strokeWidth);
 
-      return borderCanvas;
+      return finalCanvas;
     }
 
-    // 4열 6행 고정 분할 처리 함수
+    // 4열 6행 고정 분할 처리
     function processAndSliceImage() {
       if (!sourceImage) return;
 
@@ -185,7 +197,11 @@
             0, 0, cellWidth, cellHeight
           );
 
-          const finalCanvas = shouldAddBorder ? createBorderCanvas(sliceCanvas) : sliceCanvas;
+          // 테두리를 넣더라도 최종 결과물 크기는 정확히 cellWidth x cellHeight 유지
+          const finalCanvas = shouldAddBorder 
+            ? createBorderCanvasToExactSize(sliceCanvas, cellWidth, cellHeight) 
+            : sliceCanvas;
+
           slicedCanvases.push(finalCanvas);
 
           const item = document.createElement('div');
@@ -206,7 +222,7 @@
       }
 
       downloadBtn.disabled = false;
-      downloadBtn.innerText = `조각난 스티커 각각 다운로드 (${slicedCanvases.length}장)`;
+      downloadBtn.innerText = `각각 다운로드 (${slicedCanvases.length}장)`;
     }
 
     // 원본 이미지 업로드
@@ -226,7 +242,6 @@
       reader.readAsDataURL(file);
     });
 
-    // 체크박스 옵션 변경 시 즉시 미리보기 재계산
     addBorderCheckbox.addEventListener('change', processAndSliceImage);
 
     // 순차 다운로드
